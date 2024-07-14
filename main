@@ -1,90 +1,108 @@
 import time
 from datetime import datetime
-from seleniumwire import webdriver
+from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
-# url var
+# URL and parameters
 website_url = 'https://foreupsoftware.com/index.php/booking/19765/2431#teetimes'
-
-# first btn var
-button_text = 'Resident'
-
-# rsv date
-date_to_click = 23
-
-# rsv time
-time_label_to_click = '12:00pm'
+date_to_click = 20
+time_label_to_click = '2:27pm'
 
 # Set up Chrome options
 chrome_options = Options()
 chrome_options.add_argument("--start-maximized")
-chrome_options.add_experimental_option("debuggerAddress", "127.0.0.1:5556")  # Use your existing Chrome debugging address
+chrome_options.add_experimental_option("debuggerAddress", "localhost:9222")  # Use your existing Chrome debugging address
 
-# driver start var
+# Initialize WebDriver
 driver = webdriver.Chrome(options=chrome_options)
 
 try:
-    target_time = datetime.now().replace(hour=18, minute=59, second=58, microsecond=30)
-
+    # Wait until the specified time to start
+    target_time = datetime.now().replace(hour=18, minute=59, second=59, microsecond=25)
     while datetime.now() < target_time:
         time.sleep(1)
 
-    # open site
+    # Open the website
+    print("Opening website...")
     driver.get(website_url)
 
-    # click first btn 'resident'
-    resident_button = WebDriverWait(driver, 5).until(
-        EC.element_to_be_clickable((By.XPATH, f'//button[@class="btn btn-primary col-md-4 col-xs-12 col-md-offset-4"][text()="{button_text}"]'))
+    # Wait for the page to load completely
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.TAG_NAME, "body"))
     )
-    resident_button.click()
+    print("Page loaded.")
 
-    select_element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, 'schedule_select'))
+    # Click on the Resident button
+    WebDriverWait(driver, 20).until(
+        EC.element_to_be_clickable((By.XPATH, '//button[@class="btn btn-primary col-md-4 col-xs-12 col-md-offset-4" and text()="Verified NYS Resident - Bethpage Only"]'))
+    ).click()
+
+    # Select the Green Course option
+    select_element = WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.ID, "schedule_select"))
     )
-
-    # select var
     select = Select(select_element)
+    print("Selecting the Green Course option...")
+    select.select_by_value("2433")
 
-    # drop down select
-    select.select_by_value('2432')
+    time.sleep(1)
 
-    # Re-locate the select element after selecting the option
-    select_element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, 'schedule_select'))
+    # Click on the specified date
+    print(f"Waiting for date {date_to_click} to be clickable...")
+    date_element = WebDriverWait(driver, 30).until(
+        EC.element_to_be_clickable((By.XPATH, f'//td[@class="day" and text()="{date_to_click}"]'))
     )
-
-    # Create a new Select object with the updated reference
-    select = Select(select_element)
-
-    # Click on the selected option
-    selected_option = select.first_selected_option
-    selected_option.click()
-
-    # var -> date click
-    date_element = driver.find_element(By.XPATH, f'//td[@class="day" and text()="{date_to_click}"]')
+    print(f"Clicking on date {date_to_click}...")
     date_element.click()
 
-    # Wait for a few seconds to see the result
-    time.sleep(2)
+    # Add a small sleep to ensure the date click is processed
+    time.sleep(1)
 
-    # var -> time click
-    time_label_element = driver.find_element(By.XPATH, f'//div[@class="booking-start-time-label" and text()="{time_label_to_click}"]')
-    time_label_element.click()
+    # Scroll to the top of the page
+    print("Scrolling to the top of the page...")
+    driver.execute_script("window.scrollTo(0, 0);")
 
-    # number of players
-    number_element = WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//a[@class="btn btn-primary " and @data-value="4"]')))
+    # Add a small sleep to ensure the scroll action is completed
+    time.sleep(1)
+
+    # Click on the specified time tile
+    print(f"Waiting for time label {time_label_to_click} to be clickable...")
+    time_tile_element = WebDriverWait(driver, 30).until(
+        EC.element_to_be_clickable((By.XPATH, f'//div[@class="time time-tile" and .//div[@class="booking-start-time-label" and text()="{time_label_to_click}"]]'))
+    )
+    print(f"Clicking on time tile containing label {time_label_to_click}...")
+    time_tile_element.click()
+
+    # Select number of players
+    print("Waiting for number of players button to be clickable...")
+    number_element = WebDriverWait(driver, 20).until(
+        EC.element_to_be_clickable((By.XPATH, '//a[@class="btn btn-primary " and @data-value="4"]'))
+    )
+    print("Clicking number of players button...")
     number_element.click()
 
-    # booko rsv
-    book_button = WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, '//button[@class="btn btn-success js-book-button pull-left"]')))
+    # Click the 'Book Time' button
+    print("Waiting for Book Time button to be clickable...")
+    book_button = WebDriverWait(driver, 20).until(
+        EC.element_to_be_clickable((By.XPATH, '//button[@class="btn btn-success js-book-button pull-left"]'))
+    )
+    print("Clicking Book Time button...")
     book_button.click()
 
+    # Wait to see the result
     time.sleep(10)
+
+except Exception as e:
+    print(f"An error occurred: {e}")
+    # Print the current page source for debugging
+    print("Current page source:")
+    print(driver.page_source)
 
 finally:
     # Close the WebDriver session
+    print("Closing the WebDriver session...")
     driver.quit()
